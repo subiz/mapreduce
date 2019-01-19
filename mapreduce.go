@@ -1,4 +1,4 @@
-package kafka
+package mapreduce
 
 import (
 	"fmt"
@@ -15,6 +15,7 @@ const MAP = "map"
 const REDUCE = "reduce"
 const BEGIN = "begin"
 const GLOBALMAP = "global_map"
+
 
 type Message interface {
 	GetKey() string
@@ -64,18 +65,19 @@ type ReduceF func(string, interface{}, interface{}) interface{}
 type TransformF func(interface{}) interface{}
 type Sinker func(<-chan Message) chan<- Message
 
-type Reducer interface {
-	Map(f MapF) Mapper
-	GlobalMap(brokers []string, topic, csm string, f MapF) Mapper
+type RDD interface {
+	Reduce(f ReduceF) RDD
+	Map(f MapF) RDD
+	Repartition(topic, csm string, f MapF) RDD
 	Transform(TransformF) Reducer
+	Save()
+	Publish()
+
 	Sink(topic string, f MapF)
 }
 
-type Mapper interface {
-	Reduce(f ReduceF) Reducer
-}
 
-func NewMapReducer(csg, topic string) *MapReducer {
+func NewRDD(csg, topic string) *MapReducer {
 	me := &MapReducer{}
 	return me
 }

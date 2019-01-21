@@ -130,3 +130,62 @@ func countUserBySegment() {
 		return  key, "", c
 	}).Save() // created
 }
+
+type User struct {
+	account_id string
+}
+
+type TopUser struct {
+	account_id string
+	user_id string
+	updated string
+	// segmentation_id string
+}
+
+type UpdatedTopic struct {
+	account_id string
+	segmentation_id string
+	user_id string
+	updated int64
+	top_users map[string]int64
+}
+
+func update() {
+	flow.New().TextFile(
+		"/ext/passwd",
+		1000,
+	).MapGlobal("SEN", func(u User) {
+
+	}).FlatMap(func(p UpdateTopic) []KV {
+		topic := p.GetTopic()
+		subs := loadSubscriberOfTopic(topic)
+		// TODO: notify them about the update
+
+		out := make(KV, 0)
+		for _, sub := range subs {
+			out := append(out, KV{sub, UpdateTopic})
+		}
+		return out
+	}).ReduceByKey(func(x, y UpdatedTopic) UpdatedTopic {
+		if x.top_users == nil {
+			x.top_users = make(map[string]int64)
+		}
+
+		olduser := x.top_users[y.user_id]
+		if olduser < y.updated {
+			x.top_users[y.user_id] = y
+		}
+
+		// keeping the
+		if len(x.top_users) > 3000 {
+			min_user, min_updated := "", time.Now() * 10
+			for user_id, updated := range x.top_users {
+				if updated < min_updated {
+					min_updated,min_user = updated, user_id
+				}
+			}
+			delete(x.top_users, min_user)
+		}
+		return x
+	}).Map()
+}
